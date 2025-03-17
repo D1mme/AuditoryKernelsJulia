@@ -3,8 +3,12 @@ module mp_utils
     using LinearAlgebra
     using DSP
     using Base.Threads
+    using JLD2, MAT
 
-    export Kernel, MPparams, matching_pursuit, reconstruct_matching_pursuit, update_kernels!, trim_and_expand_kernels!
+    export Kernel, MPparams 					            # structures
+    export matching_pursuit, reconstruct_matching_pursuit	# matching pursuit
+    export update_kernels!, trim_and_expand_kernels! 		# kernel learning
+    export JLD22MAT                                         # Convert JLD2 file to .mat with a more forgiving structure
 
     # Define a struct to hold kernel data
     mutable struct Kernel
@@ -84,17 +88,6 @@ module mp_utils
         return x_res, kernel_list, amp_list, index_list, norm_list
     end
 
-
-    #function conv1y!(z::AbstractVector{T},x::AbstractVector,y::AbstractVector) where T
-    #     fill!(z,zero(T))
-    #     @inbounds for iy in eachindex(y)
-    #         vy = y[iy]
-    #         @simd for ix in intersect(eachindex(x), eachindex(z) .- (iy - 1))
-    #             z[iy-1+ix] += x[ix] * vy
-    #         end
-    #     end
-    #     return z
-    # end
 
     @inline function process_kernel(kernel, x_res_flip)
         tmp = similar(x_res_flip, length(x_res_flip) + length(kernel) - 1)
@@ -228,6 +221,7 @@ module mp_utils
         end
     end
 
+    
     function trim_and_expand_kernels!(kernels, threshold, expansion_range)
     # kernels is a vector of structs containing the kernels
     # threshold is the threshold on which expansion/reduction is based
@@ -267,5 +261,29 @@ module mp_utils
             kernels[ng].kernel = kernel
             kernels[ng].gradient = gradient
         end
+    end
+
+    function JLD22MAT(filepath::String, destpath::String)
+        # Load the JLD2 file
+        data = JLD2.load(filepath)
+    
+        # Check if "kernels" key exists in data
+        if !haskey(data, "kernels")
+            error("Key 'kernels' not found in the JLD2 file.")
+        end
+    
+        # Extract required fields safely
+        kernels_array = getfield.(data["kernels"], :kernel)
+        gradients_array = getfield.(data["kernels"], :gradient)
+        abs_amp_array = getfield.(data["kernels"], :abs_amp)
+    
+        # Save extracted data as .mat file
+        MAT.matwrite(destpath, Dict(
+            "kernels" => kernels_array,
+            "gradients" => gradients_array,
+            "abs_amp" => abs_amp_array
+        ))
+    
+        println("Conversion completed: JLD2 -> MAT")
     end
 end
