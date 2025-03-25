@@ -7,5 +7,8 @@ order:
     NOTE: (4) is efficiently done using bash_create_tsv_short.sh
 (5) unpack_cv_based_on_TSV.py:  apply to each language. Creates the folder clips within the folder with the language ID. Unpacks the data based on the .tsv (i.e. the one created by (4).
 created if total length is smaller than TMIN (2 hrs). 
+(6) MP3_to_wav.py:              apply to each language. Creates the folder clips_wav containing the same files as clips but as 16 kHz filtered .wav (filter passband from 100 to 6000 Hz)
+(7) update_TSV_to_include_wav.py:       apply to each language. Adds column `path_wav` with the path to the wav-file to the .tsv (i.e. /scratch/ddegroot/CommonVoice20/<LanID>/clips_wav/1234.wav
+
 
 
