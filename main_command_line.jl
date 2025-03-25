@@ -102,7 +102,7 @@ MPparam = mp_utils.MPparams(
     10,         # random_seed
     "amplitude",# stop_type
     0.1,        # stop_cond
-    20000,      # max_iter
+    40000,      # max_iter
     0.005,      # step_size
     0.7,        # smoothing_weight
     exp_threshold,      # exp_threshold (ARGS[3])
@@ -118,7 +118,6 @@ Filterparam = filter_utils.Filterparams(
     256,        # length_filter
     1024,       # length_freq_ax (plotting only)
 )
-
 
 
 # Window for kernel initialisation
@@ -159,52 +158,64 @@ arrayPlot(kernels, ID, count)
 for nEpoch in 1:nEpochs
     # Shuffle directory
     df = CSV.read(csv_file, DataFrame)
-    shuffled_paths = shuffle(df.file_path)
+    shuffled_paths = shuffle(df.path_wav)
 
     #Inner loop
     for path in shuffled_paths
+        flush(stdout)
+
         if count - 1 < count_start
             count += 1
         else
             println(count)
 
-            # Load audio
+    # Load audio
             println(path)
-            x, fs_read = wavread(path)
-            fs_read = Int(fs_read)
-            if fs_read > Filterparam.fs
-                println("resampling")
-                x = DSP.Filters.resample(x, Filterparam.fs//fs_read, dims=1)
+            succesLoadFlag = true
+            try
+                x, fs_read = wavread(path)
+            catch e
+                println("Failed reading path printed above")
+                succesLoadFlag = false
             end
-            x = DSP.Filters.filt(f, x)
-            x = x/maximum(abs.(x))
-
-            # Run MP and gradient update
-            x_res, kernel_list, amp_list, index_list, norm_list = mp_utils.matching_pursuit(x, MPparam.stop_type, MPparam.stop_cond, kernels, nothing, MPparam.max_iter)
-            mp_utils.update_kernels!(index_list, kernel_list, amp_list, kernels, x_res, MPparam.step_size, MPparam.smoothing_weight)
             
-            # Trim and expand the kernels every so often
-            if mod(count, MPparam.exp_update) == 0
-                mp_utils.trim_and_expand_kernels!(kernels, MPparam.exp_threshold, MPparam.exp_range)
-            end
+            if succesLoadFlag
+                fs_read = Int(fs_read)
+                if fs_read > Filterparam.fs
+                    println("resampling")
+                    x = DSP.Filters.resample(x, Filterparam.fs//fs_read, dims=1)
+                    x = DSP.Filters.filt(f, x)
+                end
+            
+                x = x/maximum(abs.(x))
 
-            # Plot and store results every so often
-            global count += 1
-            if mod(count, 10) == 0
-                # (1): store
-                rs = deepcopy(Random.GLOBAL_RNG)
-                save_to_jld2(ID, count, MPparam, Filterparam, csv_file, rs, kernels)
+                # Run MP and gradient update
+                x_res, kernel_list, amp_list, index_list, norm_list = mp_utils.matching_pursuit(x, MPparam.stop_type, MPparam.stop_cond, kernels, nothing, MPparam.max_iter)
+                mp_utils.update_kernels!(index_list, kernel_list, amp_list, kernels, x_res, MPparam.step_size, MPparam.smoothing_weight)
                 
-                # (2): plot
-                arrayPlot(kernels, ID, count)
+                # Trim and expand the kernels every so often
+                if mod(count, MPparam.exp_update) == 0
+                    mp_utils.trim_and_expand_kernels!(kernels, MPparam.exp_threshold, MPparam.exp_range)
+                end
+
+                # Plot and store results every so often
+                global count += 1
+                if mod(count, 10) == 0
+                    # (1): store
+                    rs = deepcopy(Random.GLOBAL_RNG)
+                    save_to_jld2(ID, count, MPparam, Filterparam, csv_file, rs, kernels)
+                    
+                    # (2): plot
+                    arrayPlot(kernels, ID, count)
+                end
+                
+                x = nothing
+                x_res = nothing
+                kernel_list = nothing
+                amp_list = nothing
+                index_list = nothing
+                norm_list = nothing
             end
-            
-            x = nothing
-            x_res = nothing
-            kernel_list = nothing
-            amp_list = nothing
-            index_list = nothing
-            norm_list = nothing
         end
     end
 end
