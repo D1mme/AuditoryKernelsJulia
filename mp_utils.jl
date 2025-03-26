@@ -3,12 +3,16 @@ module mp_utils
     using LinearAlgebra
     using DSP
     using Base.Threads
+    using FileIO: load, save, loadstreaming, savestreaming
     using JLD2, MAT
+    using Plots
+    using CSV, DataFrames
 
     export Kernel, MPparams 					            # structures
     export matching_pursuit, reconstruct_matching_pursuit	# matching pursuit
     export update_kernels!, trim_and_expand_kernels! 		# kernel learning
-    export JLD22MAT                                         # Convert JLD2 file to .mat with a more forgiving structure
+    export save_to_jld2, arrayPlot, JLD22MAT                # loggin and storitng
+
 
     # Define a struct to hold kernel data
     mutable struct Kernel
@@ -16,6 +20,7 @@ module mp_utils
         gradient::Vector{Float64}       # The gradient of the kernel (1D array)
         abs_amp::Float64                 # The absolute amplitude (float)
     end
+
 
     # Define a struct to hold parameters related to matching pursuit and gradient updates
     mutable struct MPparams
@@ -31,6 +36,7 @@ module mp_utils
         exp_range::Float64      # The range on which the norm should be computed
         exp_update::Int32       # After how many iterations the expansion is done
     end
+
 
     function matching_pursuit(x, stop_type, stop_cond, kernels, x_res=nothing, max_iter=nothing)
         if isnothing(x_res)
@@ -136,7 +142,7 @@ module mp_utils
             # Handle case where kernel is larger than the remaining signal length
             if index_val > 0
                 x_res[index_val:end] .-= kernel_tmp[1:length(x_res[index_val:end])]
-            elseif index_val < 0
+            elseif index_val < 1
                 index_end = index_val + length(kernels[kernel_val].kernel)
                 x_res[1:index_end] .-= kernel_tmp[end-length(x_res[1:index_end])+1:end]
             end
@@ -263,6 +269,7 @@ module mp_utils
         end
     end
 
+    
     function JLD22MAT(filepath::String, destpath::String)
         # Load the JLD2 file
         data = JLD2.load(filepath)
@@ -286,4 +293,66 @@ module mp_utils
     
         println("Conversion completed: JLD2 -> MAT")
     end
+
+
+    ##  Function for plotting
+    function arrayPlot(kernels, ID::String, count::Int)
+        Ng = length(kernels)  # Number of kernels
+        rows, cols = 4, 8     # Define layout size
+        max_plots = rows * cols
+        Ng = min(Ng, max_plots)  # Prevent exceeding 32 subplots
+
+        # Construct the file path where the figure will be saved
+        dir_name = "Results_" * ID
+        file_name = "figure_" * string(count) * ".svg"
+        file_path = joinpath(dir_name, file_name)
+
+        if !isdir(dir_name)
+            mkdir(dir_name)
+        end
+        
+        # Create plot with a more tightly packed layout
+        p = plot(
+            layout=(rows, cols),  # 4x8 grid layout
+            size=(1200, 600),      # Figure size (adjust as needed)
+            margin=0.5Plots.mm,    # Tight margin to reduce whitespace
+            padding=0.5Plots.mm,   # Reducing padding between subplots
+            legend=false,          # Disable legend for clarity
+            showaxis=false,        # Hide axes to save space
+            framestyle=:none,      # No borders for each plot
+        )
+
+        # Add each kernel as a subplot (adjusting subplot numbers to fit)
+        for j in 1:Ng
+            plot!(p, kernels[j].kernel, subplot=j, showaxis=false, legend=false)
+        end
+
+        # Save the plot to the specified file as SVG
+        savefig(p, file_path)
+
+        println("Plot saved to: ", file_path)  # Print where the file is saved
+        p = nothing	
+    end
+
+
+    ## Function for saving result
+    function save_to_jld2(ID::String, count::Int, MPparam, Filterparam, csv_file::String, rs, kernels)
+        # Create directory if it doesn't exist
+        dir_name = "Results_" * ID
+        if !isdir(dir_name)
+            mkdir(dir_name)
+        end
+
+        # Construct file path
+        file_name = "kernels_" * string(count) * ".jld2"
+        file_path = joinpath(dir_name, file_name)
+
+        # Save variables to JLD2 file
+        JLD2.@save file_path MPparam Filterparam csv_file count rs kernels
+
+        println("Saved to: ", file_path)
+    end
+
 end
+
+

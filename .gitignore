@@ -1,2 +1,5 @@
 TestFolder/**
 test_JLD22MAT.jl
+Results_**
+LOG_*
+tsv_files/**

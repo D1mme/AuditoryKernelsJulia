@@ -42,5 +42,5 @@ export JULIA_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 # Run Julia script
 echo "${array_valid[$SLURM_ARRAY_TASK_ID]}"
-julia main_command_line.jl "${array_valid[$SLURM_ARRAY_TASK_ID]}" "tsv_files/train_${array_valid[$SLURM_ARRAY_TASK_ID]}.tsv" 0.008 20 > LOG_${array_valid[$SLURM_ARRAY_TASK_ID]}.log
+julia main_command_line.jl --check_bounds=yes "${array_valid[$SLURM_ARRAY_TASK_ID]}" "tsv_files/train_${array_valid[$SLURM_ARRAY_TASK_ID]}.tsv" 0.008 20 > LOG_${array_valid[$SLURM_ARRAY_TASK_ID]}.log
 
