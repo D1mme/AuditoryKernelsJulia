@@ -6,15 +6,13 @@ Pkg.activate(@__DIR__)
 
 include(joinpath(@__DIR__, "filter_utils.jl"))  # Load the file containing the filter functions
 include(joinpath(@__DIR__, "mp_utils.jl"))  # Load the file containing the MP functions
-#import FFTW
+
 import DSP
 import .mp_utils
 import .filter_utils
 using Random
 using LinearAlgebra
-#using Plots
 using WAV
-#using Base.Threads
 using CSV, DataFrames
 using JLD2
 
@@ -113,7 +111,7 @@ function store_figure_and_jld2(kernels, ID, count, MPparam, Filterparam, csv_fil
         mp_utils.save_to_jld2(ID, count, MPparam, Filterparam, csv_file, kernels)
         
         # (2): plot
-        arrayPlot(kernels, ID, count)
+        mp_utils.arrayPlot(kernels, ID, count)
     end
 end
 
@@ -125,6 +123,8 @@ end
 
 
 function run_epochs(MPparam, Filterparam, kernels, csv_file, count_start, filter_flag, normalise_flag)
+    println(" ")
+    flush(stdout)
     count = 0
 
     # Outer loop: epochs - load csv with shuffled entries
@@ -143,15 +143,16 @@ function run_epochs(MPparam, Filterparam, kernels, csv_file, count_start, filter
                     MPparam.exp_threshold = MPparam.exp_threshold_schedule[idx]
                 end
             end
-
-            println(" ")
-            flush(stdout)
     
             if count - 1 < count_start
                 count += 1
             else
+                println(" ")
+            	flush(stdout)
+
                 println(count)
                 println(path)
+
                 x, fs_read, successLoadFlag = load_audio(path)
 
                 if successLoadFlag
@@ -167,7 +168,6 @@ function run_epochs(MPparam, Filterparam, kernels, csv_file, count_start, filter
 end
     
 
-
 # Logging info
 println("Number of threads: ", Threads.nthreads())
 println(pwd())
@@ -181,7 +181,7 @@ nIts = parse(Int, ARGS[4])
 
 
 ## If there are 5 arguments we continue from a previous run
-if length(ARGS)<5
+if length(ARGS) < 5
     continue_flag = false	
     count_start = 0
 else
@@ -199,15 +199,15 @@ MPparam = mp_utils.MPparams(
     "amplitude",# stop_type
     0.1,        # stop_cond
     40000,      # max_iter
-    0.001,      # step_size
+    0.0015,      # step_size
     0.7,        # smoothing_weight
     exp_threshold,      # exp_threshold (ARGS[3])
     1/10,       # exp_range
     50,          # exp_update
     10,          # nStore    
-    1000,        # maxEpochs     
-    [250, 500, 1000, 2000, 3000, 4000],          # count_schedule
-    [0.0025, 0.005, 0.0025, 0.0025, 0.001],         # step_size_schedule
+    1000,        # maxEpochs (in practice we might hit 5 or something)    
+    [250, 500, 1000, 2000, 3000, 5000],     # count_schedule
+    [0.0025, 0.005, 0.0025, 0.0025, 0.001], # step_size_schedule
     exp_threshold*[1, 1, 0.75, 0.5, 0.25]   # exp_threshold_schedule
 )
 

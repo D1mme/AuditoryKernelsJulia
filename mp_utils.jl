@@ -103,8 +103,6 @@ module mp_utils
     @inline function process_kernel(kernel, x_res_flip)
         tmp = similar(x_res_flip, length(x_res_flip) + length(kernel) - 1)
         conv!(tmp, x_res_flip, kernel)
-        #tmp = similar(x_res_flip, length(x_res_flip) + length(kernel) - 1)
-        #conv1y!(tmp, x_res_flip, kernel)
         b_j = argmax(abs.(tmp))
         b_j = b_j[1]
         a_j = tmp[b_j]
@@ -274,32 +272,6 @@ module mp_utils
         end
     end
 
-    
-    function JLD22MAT(filepath::String, destpath::String)
-        # Load the JLD2 file
-        data = JLD2.load(filepath)
-    
-        # Check if "kernels" key exists in data
-        if !haskey(data, "kernels")
-            error("Key 'kernels' not found in the JLD2 file.")
-        end
-    
-        # Extract required fields safely
-        kernels_array = getfield.(data["kernels"], :kernel)
-        gradients_array = getfield.(data["kernels"], :gradient)
-        abs_amp_array = getfield.(data["kernels"], :abs_amp)
-    
-        # Save extracted data as .mat file
-        MAT.matwrite(destpath, Dict(
-            "kernels" => kernels_array,
-            "gradients" => gradients_array,
-            "abs_amp" => abs_amp_array
-        ))
-    
-        println("Conversion completed: JLD2 -> MAT")
-    end
-
-
     ##  Function for plotting
     function arrayPlot(kernels, ID::String, count::Int)
         Ng = length(kernels)  # Number of kernels
@@ -358,6 +330,30 @@ module mp_utils
         println("Saved to: ", file_path)
     end
 
+
+    function JLD22MAT(filepath::String, destpath::String)
+        # Load the JLD2 file
+        data = JLD2.load(filepath)
+    
+        # Check if "kernels" key exists in data
+        if !haskey(data, "kernels")
+            error("Key 'kernels' not found in the JLD2 file.")
+        end
+    
+        # Extract required fields safely
+        kernels_array = getfield.(data["kernels"], :kernel)
+        gradients_array = getfield.(data["kernels"], :gradient)
+        abs_amp_array = getfield.(data["kernels"], :abs_amp)
+    
+        # Save extracted data as .mat file
+        MAT.matwrite(destpath, Dict(
+            "kernels" => kernels_array,
+            "gradients" => gradients_array,
+            "abs_amp" => abs_amp_array
+        ))
+    
+        println("Conversion completed: JLD2 -> MAT")
+    end
 end
 
 
