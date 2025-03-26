@@ -1,4 +1,4 @@
-# Example:  julia main_command_line.jl "TIMIT" "TIMIT_train.csv" 0.008 4000
+# Example:  julia main_command_line.jl "TIMIT" "TIMIT_train.csv" 0.01 8000
 
 # Activate the current environment to ensure the correct dependencies are used
 import Pkg
@@ -105,8 +105,8 @@ function expand_kernels!(kernels, MPparam, count)
 end
 
 
-function store_figure_and_jld2(kernels, ID, count, MPparam, Filterparam, csv_file)
-    if mod(count, MPparam.nStore) == 0
+function store_figure_and_jld2(kernels, ID, count, MPparam, Filterparam, csv_file, force_store=false)
+    if mod(count, MPparam.nStore) == 0 || force_store
         # (1): store
         mp_utils.save_to_jld2(ID, count, MPparam, Filterparam, csv_file, kernels)
         
@@ -163,8 +163,14 @@ function run_epochs(MPparam, Filterparam, kernels, csv_file, count_start, filter
                     store_figure_and_jld2(kernels, ID, count, MPparam, Filterparam, csv_file)  # Plot and store results every so often
                 end
             end
+            
+            if count >= MPparam.nTrainIts
+                store_figure_and_jld2(kernels, ID, count, MPparam, Filterparam, csv_file, true)  # Plot and store result
+                @goto terminate_loops
+            end
         end
     end
+    @label terminate_loops
 end
     
 
@@ -177,7 +183,7 @@ println(pwd())
 ID = ARGS[1] #"TIMIT" 
 csv_file = ARGS[2] #"TIMIT_train.csv"
 exp_threshold = parse(Float64, ARGS[3])
-nIts = parse(Int, ARGS[4])
+nTrainIts = parse(Int, ARGS[4])
 
 
 ## If there are 5 arguments we continue from a previous run
@@ -204,11 +210,12 @@ MPparam = mp_utils.MPparams(
     exp_threshold,      # exp_threshold (ARGS[3])
     1/10,       # exp_range
     50,          # exp_update
-    10,          # nStore    
+    25,          # nStore    
     1000,        # maxEpochs (in practice we might hit 5 or something)    
     [250, 500, 1000, 2000, 3000, 5000],     # count_schedule
     [0.0025, 0.005, 0.0025, 0.0025, 0.001], # step_size_schedule
-    exp_threshold*[1, 1, 0.75, 0.5, 0.25]   # exp_threshold_schedule
+    exp_threshold*[1, 1, 0.75, 0.5, 0.25],   # exp_threshold_schedule
+    nTrainIts   # nTrainIts (ARGS[4])
 )
 
 
@@ -247,3 +254,6 @@ end
 mp_utils.arrayPlot(kernels, ID, count_start)
 run_epochs(MPparam, Filterparam, kernels, csv_file, count_start, filter_flag, normalise_flag)
 
+
+println("Maximum number of iterations reached. Terminating program.")
+exit(0)

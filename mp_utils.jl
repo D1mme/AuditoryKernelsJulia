@@ -40,6 +40,7 @@ module mp_utils
         count_schedule::Vector{Int32}  # Schedule for updating step_size and exp_threshold
         step_size_schedule::Vector{Float64}  # Schedule for updating step_size
         exp_threshold_schedule::Vector{Float64}  # Schedule for updating exp_threshold
+        nTrainIts::Int32        # Number of training iterations
     end
 
 
