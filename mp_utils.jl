@@ -37,6 +37,9 @@ module mp_utils
         exp_update::Int32       # After how many iterations the expansion is done
         nStore::Int32           # How often to store the kernels
         maxEpochs::Int32        # Maximum number of epochs
+        count_schedule::Vector{Int32}  # Schedule for updating step_size and exp_threshold
+        step_size_schedule::Vector{Float64}  # Schedule for updating step_size
+        exp_threshold_schedule::Vector{Float64}  # Schedule for updating exp_threshold
     end
 
 
@@ -338,7 +341,7 @@ module mp_utils
 
 
     ## Function for saving result
-    function save_to_jld2(ID::String, count::Int, MPparam, Filterparam, csv_file::String, rs, kernels)
+    function save_to_jld2(ID::String, count::Int, MPparam, Filterparam, csv_file::String, kernels)
         # Create directory if it doesn't exist
         dir_name = "Results_" * ID
         if !isdir(dir_name)
@@ -350,7 +353,7 @@ module mp_utils
         file_path = joinpath(dir_name, file_name)
 
         # Save variables to JLD2 file
-        JLD2.@save file_path MPparam Filterparam csv_file count rs kernels
+        JLD2.@save file_path MPparam Filterparam csv_file count kernels
 
         println("Saved to: ", file_path)
     end
