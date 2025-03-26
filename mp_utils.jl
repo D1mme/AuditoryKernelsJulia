@@ -35,6 +35,8 @@ module mp_utils
         exp_threshold::Float64  # The norm for which to expand the kernels
         exp_range::Float64      # The range on which the norm should be computed
         exp_update::Int32       # After how many iterations the expansion is done
+        nStore::Int32           # How often to store the kernels
+        maxEpochs::Int32        # Maximum number of epochs
     end
 
 

@@ -2,20 +2,25 @@
 
 import Pkg 
 Pkg.activate(".")
-import FFTW
+#import FFTW
 using Random
 using LinearAlgebra
-using Plots
+#using Plots
 using WAV
 include("mp_utils.jl")  # Load the file
 import .mp_utils
 include("filter_utils.jl")
 import .filter_utils
-using Base.Threads
+#using Base.Threads
 
 import DSP
 using CSV, DataFrames
 using JLD2
+
+
+# Logging info
+println("Number of threads: ", Threads.nthreads())
+println(pwd())
 
 
 ##  Input arguments 
@@ -25,12 +30,6 @@ exp_threshold = parse(Float64, ARGS[3])
 nIts = parse(Int, ARGS[4])
 
 
-## This is to keep the loop going till nIts is reached.
-maxEpochs = 1000 
-
-## This decides how often data is stored
-nStore = 10
-
 ## If there are 5 arguments we continue from a previous run
 if length(ARGS)<5
     continue_flag = false	
@@ -39,10 +38,6 @@ else
     continue_flag = true
     count_start = parse(Int, ARGS[5])
 end
-
-
-println("Number of threads: ", Threads.nthreads())
-println(pwd())
 
 
 ##  Set user parameters
@@ -58,7 +53,9 @@ MPparam = mp_utils.MPparams(
     0.7,        # smoothing_weight
     exp_threshold,      # exp_threshold (ARGS[3])
     1/10,       # exp_range
-    50          # exp_update
+    50,          # exp_update
+    10,          # nStore    
+    1000        # maxEpochs     
 )
 
 
@@ -111,8 +108,8 @@ end
 
 
 # Main loop
-arrayPlot(kernels, ID, count)
-for nEpoch in 1:maxEpochs
+mp_utils.arrayPlot(kernels, ID, count)
+for nEpoch in 1:MPparam.maxEpochs
     # Shuffle directory
     df = CSV.read(csv_file, DataFrame)
     shuffled_paths = shuffle(df.path_wav)
@@ -157,10 +154,10 @@ for nEpoch in 1:maxEpochs
 
                 # Plot and store results every so often
                 count += 1
-                if mod(count, nStore) == 0
+                if mod(count, MPparam.nStore) == 0
                     # (1): store
                     rs = deepcopy(Random.GLOBAL_RNG)
-                    save_to_jld2(ID, count, MPparam, Filterparam, csv_file, rs, kernels)
+                    mp_utils.save_to_jld2(ID, count, MPparam, Filterparam, csv_file, rs, kernels)
                     
                     # (2): plot
                     arrayPlot(kernels, ID, count)
